@@ -3,27 +3,25 @@ import requests
 
 import sys
 import json
-import time
 
 
 def proof_of_work(block):
-    """
-    Simple Proof of Work Algorithm
-    Stringify the block and look for a proof.
-    Loop through possibilities, checking each one against `valid_proof`
-    in an effort to find a number that is a valid proof
-    :return: A valid proof for the provided block
-    """
-    print("Starting")
-    start_time = time.time()
-    block_string = json.dumps(block, sort_keys=True).encode()
-    proof = 0
-    while valid_proof(block_string, proof) is False:
-        proof += 1
-    end_time = time.time()
-    print(f"Finished mining in {int(end_time - start_time)} secs")
+        """
+        Simple Proof of Work Algorithm
+        Stringify the block and look for a proof.
+        Loop through possibilities, checking each one against `valid_proof`
+        in an effort to find a number that is a valid proof
+        :return: A valid proof for the provided block
+        """
+        # One line version of code to stringify a block
+        block_string = json.dumps(block, sort_keys=True).encode()
+        proof = 0
+        while valid_proof(block_string, proof) is False:
+            proof += 1
 
-    return proof
+        return proof
+
+
 
 
 def valid_proof(block_string, proof):
@@ -37,25 +35,30 @@ def valid_proof(block_string, proof):
     correct number of leading zeroes.
     :return: True if the resulting hash is a valid proof, False otherwise
     """
-    guess = f"{block_string}{proof}".encode()
+    # set a guess
+    guess = f'{block_string}{proof}'.encode()
+    # hash the guess
     guess_hash = hashlib.sha256(guess).hexdigest()
-    return guess_hash[:3] == "00000"
+    # return guess validity
+    return guess_hash[:6] == "000000"
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # What is the server address? IE `python3 miner.py https://server.com/api/`
     if len(sys.argv) > 1:
         node = sys.argv[1]
     else:
-        node = "http://localhost:5001"
+        node = "http://localhost:5000"
 
     # Load ID
     f = open("rexben.txt", "r")
     id = f.read()
     print("ID is", id)
     f.close()
+    coins_mined = 0
 
     # Run forever until interrupted
+    print("Starting miner")
     while True:
         r = requests.get(url=node + "/last_block")
         # Handle non-json response
@@ -64,12 +67,11 @@ if __name__ == "__main__":
         except ValueError:
             print("Error:  Non-json response")
             print("Response returned:")
+            print(r)
             break
 
-        # TODO: Get the block from `data` and use it to look for a new proof
-        # new_proof = ???
-
-        new_proof = proof_of_work(data)
+        # Get the block from `data` and use it to look for a new proof
+        new_proof = proof_of_work(data.get('last_block')) 
 
         # When found, POST it to the server {"proof": new_proof, "id": id}
         post_data = {"proof": new_proof, "id": id}
@@ -77,13 +79,12 @@ if __name__ == "__main__":
         r = requests.post(url=node + "/mine", json=post_data)
         data = r.json()
 
-        # TODO: If the server responds with a 'message' 'New Block Forged'
+        # If the server responds with a 'message' 'New Block Forged'
         # add 1 to the number of coins mined and print it.  Otherwise,
         # print the message from the server.
-        print(data)
-        coin = 0
-        if data["message"] == "New Block Forged":
-            coin += 1
-            # print(data['message'])
+
+        if data.get('message') == 'New Block Forged':
+            coins_mined += 1
+            print(f"Total coins mined: {coins_mined}")
         else:
-            print("")
+            print(data.get('message'))
