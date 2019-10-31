@@ -77,6 +77,9 @@ class Blockchain(object):
     @property
     def last_block(self):
         return self.chain[-1]
+    
+    def get_last_block(self):
+        return self.last_block
 
     def proof_of_work(self):
         """
@@ -108,10 +111,9 @@ class Blockchain(object):
         """
         guess = f"{block_string}{proof}".encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:3] == "000"
+        return guess_hash[:3] == "000000"
 
-    def get_last_block(self):
-        return self.last_block
+
 
 
 # Instantiate our Node
@@ -124,21 +126,28 @@ node_identifier = str(uuid4()).replace("-", "")
 blockchain = Blockchain()
 
 
-@app.route("/mine", methods=["GET"])
+@app.route("/mine", methods=["POST"])
 def mine():
     # We run the proof of work algorithm to get the next proof...
-    proof = blockchain.proof_of_work()
+    # proof = blockchain.proof_of_work()
+
+    proof = request.get_json()
+
+    print('proof: ', proof)
+
+    if 'id' in proof or not proof['proof']:
+        return jsonify({'error': 'Error, no id'})
 
     # Forge the new Block by adding it to the chain
     previous_hash = blockchain.hash(blockchain.last_block)
     block = blockchain.new_block(proof, previous_hash)
 
     response = {
-        "message": "New Block Forged",
-        "index": block["index"],
-        "transactions": block["transactions"],
-        "proof": block["proof"],
-        "previous_hash": block["previous_hash"],
+        'message': "New Block Forged",
+        'index': block['index'],
+        'transactions': block['transactions'],
+        'proof': block['proof'],
+        'previous_hash': block['previous_hash'],
     }
     return jsonify(response), 200
 
